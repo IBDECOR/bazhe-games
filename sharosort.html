@@ -1,0 +1,544 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Шаросорт</title>
+<style>*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+body{background:radial-gradient(circle at 50% 0%,hsl(var(--h,200) 70% 45%),hsl(calc(var(--h,200) + 40) 60% 18%) 75%)}
+#app{position:relative;height:100%;width:100%;max-width:640px;margin:0 auto}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center}
+.screen.active{display:flex}
+button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
+
+#menu{justify-content:center;gap:20px}
+.logo{display:flex;flex-direction:column;align-items:center;font-weight:900;font-size:clamp(50px,16vw,88px);line-height:.95;letter-spacing:2px;text-shadow:0 6px 0 rgba(0,0,0,.3)}
+.logo span:last-child{color:#ffd43b}
+.demo{display:flex;gap:10px}
+.demo i{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff8,var(--c) 45%);box-shadow:0 4px 0 rgba(0,0,0,.25);animation:bob 1.6s ease-in-out infinite}
+.demo i:nth-child(2){animation-delay:.2s}.demo i:nth-child(3){animation-delay:.4s}.demo i:nth-child(4){animation-delay:.6s}
+@keyframes bob{50%{transform:translateY(-10px)}}
+.tagline{opacity:.85;font-size:18px}
+.big{background:linear-gradient(#ffd43b,#f59f00);color:#3b2300;font-weight:800;font-size:24px;padding:16px 56px;border-radius:40px;box-shadow:0 6px 0 #b86e00,0 10px 24px rgba(0,0,0,.3)}
+.big:active{transform:translateY(4px);box-shadow:0 2px 0 #b86e00}
+.big.alt{background:linear-gradient(#69db7c,#2f9e44);color:#fff;box-shadow:0 6px 0 #1e6b2e;font-size:19px;padding:12px 30px}
+.coin{display:inline-block;width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff3b0,#fab005 55%,#e67700);vertical-align:middle}
+.menu-coins,.coins{display:flex;align-items:center;gap:6px;font-size:20px;font-weight:800}
+
+.bar{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px}
+#level-title{flex:1;font-weight:800;font-size:20px}
+.coins{background:rgba(0,0,0,.25);padding:4px 12px;border-radius:20px}
+.icon{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.15);font-size:20px}
+
+#board-wrap{flex:1;width:100%;display:flex;align-items:center;justify-content:center;min-height:0;padding:8px}
+#board{display:flex;flex-wrap:wrap;justify-content:center;align-content:center;gap:var(--gap)}
+.tube{position:relative;width:var(--tw);height:var(--th);border-radius:0 0 calc(var(--tw)/2) calc(var(--tw)/2);background:rgba(255,255,255,.13);border:3px solid rgba(255,255,255,.45);border-top:none;display:flex;flex-direction:column-reverse;align-items:center;padding:6% 0;gap:3%;transition:transform .15s}
+.tube::before{content:"";position:absolute;top:-6px;left:-7px;right:-7px;height:8px;border-radius:6px;background:rgba(255,255,255,.5)}
+.tube.sel{transform:translateY(-16px)}
+.tube.done{border-color:#ffd43b;box-shadow:0 0 18px #ffd43b88}
+.ball{width:78%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fffa,var(--c) 45%,color-mix(in srgb,var(--c),#000 25%));box-shadow:0 3px 0 rgba(0,0,0,.25);flex-shrink:0}
+.tube.sel .ball:last-child{transform:translateY(calc(-1 * var(--th) * .28));transition:transform .15s}
+.tube.shake{animation:shake .3s}
+@keyframes shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+#controls{display:flex;gap:18px;padding:10px 0 max(18px,env(safe-area-inset-bottom))}
+.tool{width:70px;height:62px;border-radius:18px;background:rgba(255,255,255,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:24px;font-weight:800}
+.tool small{font-size:11px;opacity:.9}
+
+.overlay{position:absolute;inset:0;background:rgba(0,10,30,.6);display:none;align-items:center;justify-content:center;z-index:10}
+.overlay.show{display:flex}
+.card{background:linear-gradient(#228be6,#1864ab);border-radius:28px;padding:30px 26px;display:flex;flex-direction:column;align-items:center;gap:16px;width:min(88%,360px);box-shadow:0 20px 50px rgba(0,0,0,.4);animation:pop .4s}
+@keyframes pop{0%{transform:scale(.5)}70%{transform:scale(1.08)}100%{transform:scale(1)}}
+.card h2{font-size:36px;color:#ffd43b}
+.reward{font-size:30px;font-weight:900;display:flex;align-items:center;gap:8px}
+.reward .coin{width:30px;height:30px}
+#toast{position:absolute;left:50%;top:18%;transform:translateX(-50%);background:rgba(0,0,0,.75);padding:10px 18px;border-radius:16px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none;z-index:20;white-space:nowrap}
+#toast.show{opacity:1}
+.fake-ad{position:fixed;inset:0;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;z-index:100}
+</style>
+</head>
+<body>
+<div id="app">
+  <section id="menu" class="screen active">
+    <div class="logo"><span>ШАРО</span><span>СОРТ</span></div>
+    <div class="demo"><i style="--c:#ff6b6b"></i><i style="--c:#ffd43b"></i><i style="--c:#51cf66"></i><i style="--c:#4dabf7"></i></div>
+    <p class="tagline">Разложи шарики по цветам</p>
+    <button id="play" class="big">Играть</button>
+    <div class="menu-coins"><i class="coin"></i><b id="menu-coins">0</b></div>
+  </section>
+
+  <section id="game" class="screen">
+    <header class="bar">
+      <button id="home" class="icon" aria-label="Меню">☰</button>
+      <div id="level-title">Уровень 1</div>
+      <div class="coins"><i class="coin"></i><b id="coins">0</b></div>
+      <button id="mute" class="icon" aria-label="Звук">🔊</button>
+    </header>
+    <div id="board-wrap"><div id="board"></div></div>
+    <div id="controls">
+      <button id="undo" class="tool"><span>↶</span><small id="undo-left">3</small></button>
+      <button id="restart" class="tool"><span>⟳</span><small>заново</small></button>
+      <button id="addtube" class="tool"><span>＋</span><small>▶ колба</small></button>
+    </div>
+  </section>
+
+  <div id="win" class="overlay">
+    <div class="card">
+      <h2>Готово!</h2>
+      <p id="win-text">Уровень пройден</p>
+      <div class="reward"><i class="coin"></i>+<b id="win-coins">10</b></div>
+      <button id="double" class="big alt">▶ Удвоить награду</button>
+      <button id="next" class="big">Дальше</button>
+    </div>
+  </div>
+  <div id="toast"></div>
+</div>
+<script>window.BAZHE_TARGET="telegram";window.BAZHE_ADS={"tgInter": "", "tgReward": "", "rsyaInter": "", "rsyaReward": ""};</script><script>// Адаптер площадок: Яндекс Игры, VK/OK (VK Bridge), Telegram Mini App (Adsgram),
+// RuStore APK (РСЯ в WebView), локальный запуск.
+// Площадку можно задать явно: window.BAZHE_TARGET = 'telegram' | 'rustore' (ставит сборщик).
+// ID рекламных блоков берутся из window.BAZHE_ADS (тоже ставит сборщик).
+const Platform = (() => {
+  const qs = new URLSearchParams(location.search);
+  const ADS = window.BAZHE_ADS || {};
+  let kind = window.BAZHE_TARGET || 'local';
+  if (kind === 'local') {
+    if (qs.has('vk_app_id') || qs.has('vk_platform')) kind = 'vk';
+    else if (/yandex|playhop/.test(location.hostname)) kind = 'yandex';
+  }
+
+  const INTER_COOLDOWN = 60000;
+  let ysdk = null, player = null, bridge = null, tg = null, lastInter = Date.now();
+  let adsInter = null, adsReward = null;
+  const hooks = { pause: () => {}, resume: () => {} };
+
+  function loadScript(src) {
+    return new Promise((ok, fail) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = ok; s.onerror = fail;
+      document.head.appendChild(s);
+    });
+  }
+  function withTimeout(p, ms) {
+    return Promise.race([p, new Promise((_, fail) => setTimeout(() => fail(new Error('timeout')), ms))]);
+  }
+
+  async function init() {
+    try {
+      if (kind === 'yandex') {
+        await withTimeout(loadScript('/sdk.js'), 6000);
+        ysdk = await withTimeout(YaGames.init(), 6000);
+        try { player = await ysdk.getPlayer({ scopes: false }); } catch (e) { player = null; }
+        ysdk.on && ysdk.on('game_api_pause', () => hooks.pause());
+        ysdk.on && ysdk.on('game_api_resume', () => hooks.resume());
+      } else if (kind === 'vk') {
+        await withTimeout(loadScript('https://unpkg.com/@vkontakte/vk-bridge@2.14.1/dist/browser.min.js'), 6000);
+        bridge = window.vkBridge;
+        await bridge.send('VKWebAppInit');
+        bridge.subscribe(e => {
+          const t = e.detail && e.detail.type;
+          if (t === 'VKWebAppViewHide') hooks.pause();
+          if (t === 'VKWebAppViewRestore') hooks.resume();
+        });
+        preloadVk();
+      } else if (kind === 'telegram') {
+        await withTimeout(loadScript('https://telegram.org/js/telegram-web-app.js'), 6000);
+        tg = window.Telegram && window.Telegram.WebApp;
+        if (tg) { tg.ready(); tg.expand(); tg.disableVerticalSwipes && tg.disableVerticalSwipes(); }
+        try {
+          await withTimeout(loadScript('https://sad.adsgram.ai/js/sad.min.js'), 6000);
+          if (ADS.tgInter) adsInter = window.Adsgram.init({ blockId: ADS.tgInter });
+          if (ADS.tgReward) adsReward = window.Adsgram.init({ blockId: ADS.tgReward });
+        } catch (e) { console.warn('adsgram not loaded', e); }
+      } else if (kind === 'rustore') {
+        // реклама РСЯ (веб-блоки) внутри WebView приложения
+        window.yaContextCb = window.yaContextCb || [];
+        loadScript('https://yandex.ru/ads/system/context.js').catch(() => {});
+      }
+    } catch (e) {
+      console.warn('platform init failed, local mode', e);
+      kind = 'local';
+    }
+  }
+
+  function preloadVk() {
+    bridge.send('VKWebAppCheckNativeAds', { ad_format: 'interstitial' }).catch(() => {});
+    bridge.send('VKWebAppCheckNativeAds', { ad_format: 'reward' }).catch(() => {});
+  }
+
+  function ready() {
+    try { ysdk && ysdk.features.LoadingAPI && ysdk.features.LoadingAPI.ready(); } catch (e) {}
+  }
+  function gameplay(on) {
+    try {
+      const g = ysdk && ysdk.features.GameplayAPI;
+      if (g) on ? g.start() : g.stop();
+    } catch (e) {}
+  }
+
+  // РСЯ: полноэкранный/вознаграждаемый блок; true — досмотрен
+  function rsya(blockId, type) {
+    return new Promise(done => {
+      if (!blockId || !window.yaContextCb) return done(false);
+      let finished = false;
+      const finish = ok => { if (finished) return; finished = true; hooks.resume(); done(ok); };
+      hooks.pause();
+      window.yaContextCb.push(() => {
+        try {
+          Ya.Context.AdvManager.render({
+            blockId, type, platform: 'touch',
+            onRewarded: () => finish(true),
+            onClose: () => finish(type !== 'rewarded'),
+            onError: () => finish(false),
+          });
+        } catch (e) { finish(false); }
+      });
+      setTimeout(() => finish(false), 60000);
+    });
+  }
+
+  function showInterstitial() {
+    if (Date.now() - lastInter < INTER_COOLDOWN) return Promise.resolve(false);
+    lastInter = Date.now();
+    if (kind === 'yandex') {
+      return new Promise(done => {
+        ysdk.adv.showFullscreenAdv({ callbacks: {
+          onOpen: () => hooks.pause(),
+          onClose: shown => { hooks.resume(); done(shown); },
+          onError: () => { hooks.resume(); done(false); },
+        } });
+      });
+    }
+    if (kind === 'vk') {
+      hooks.pause();
+      return bridge.send('VKWebAppShowNativeAds', { ad_format: 'interstitial' })
+        .then(d => !!(d && d.result)).catch(() => false)
+        .finally(() => { hooks.resume(); preloadVk(); });
+    }
+    if (kind === 'telegram') {
+      if (!adsInter) return Promise.resolve(false);
+      hooks.pause();
+      return adsInter.show().then(() => true).catch(() => false).finally(() => hooks.resume());
+    }
+    if (kind === 'rustore') return rsya(ADS.rsyaInter, 'fullscreen');
+    console.log('[ads] interstitial (локально)');
+    return Promise.resolve(false);
+  }
+
+  // true только если реклама досмотрена и награда положена
+  function showRewarded() {
+    if (kind === 'yandex') {
+      return new Promise(done => {
+        let rewarded = false, finished = false;
+        const finish = () => { if (finished) return; finished = true; hooks.resume(); done(rewarded); };
+        ysdk.adv.showRewardedVideo({ callbacks: {
+          onOpen: () => hooks.pause(),
+          onRewarded: () => { rewarded = true; },
+          onClose: finish,
+          onError: finish,
+        } });
+      });
+    }
+    if (kind === 'vk') {
+      hooks.pause();
+      return bridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
+        .then(d => !!(d && d.result)).catch(() => false)
+        .finally(() => { hooks.resume(); lastInter = Date.now(); preloadVk(); });
+    }
+    if (kind === 'telegram') {
+      if (!adsReward) return Promise.resolve(false);
+      hooks.pause();
+      // Adsgram: resolve с done=true — досмотрено до конца
+      return adsReward.show().then(r => !!(r && r.done)).catch(() => false)
+        .finally(() => { hooks.resume(); lastInter = Date.now(); });
+    }
+    if (kind === 'rustore') return rsya(ADS.rsyaReward, 'rewarded').then(ok => { lastInter = Date.now(); return ok; });
+    return fakeAd();
+  }
+
+  function fakeAd() {
+    return new Promise(done => {
+      const el = document.createElement('div');
+      el.className = 'fake-ad';
+      el.textContent = 'Реклама (тест)…';
+      document.body.appendChild(el);
+      hooks.pause();
+      setTimeout(() => { el.remove(); hooks.resume(); done(true); }, 1200);
+    });
+  }
+
+  const KEY = 'sharosort_save';
+
+  async function load() {
+    const all = [];
+    try { const s = localStorage.getItem(KEY); if (s) all.push(JSON.parse(s)); } catch (e) {}
+    try {
+      if (kind === 'vk') {
+        const r = await withTimeout(bridge.send('VKWebAppStorageGet', { keys: [KEY] }), 3000);
+        const v = r.keys && r.keys[0] && r.keys[0].value;
+        if (v) all.push(JSON.parse(v));
+      } else if (player) {
+        const d = await withTimeout(player.getData([KEY]), 3000);
+        if (d && d[KEY]) all.push(d[KEY]);
+      } else if (tg && tg.CloudStorage) {
+        const v = await withTimeout(new Promise(ok => tg.CloudStorage.getItem(KEY, (e, val) => ok(e ? null : val))), 3000);
+        if (v) all.push(JSON.parse(v));
+      }
+    } catch (e) {}
+    // берём самый продвинутый сейв
+    all.sort((a, b) => (b.lvl || 0) - (a.lvl || 0) || (b.ts || 0) - (a.ts || 0));
+    return all[0] || null;
+  }
+
+  let saveTimer = null;
+  function save(data) {
+    data.ts = Date.now();
+    const json = JSON.stringify(data);
+    try { localStorage.setItem(KEY, json); } catch (e) {}
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        if (kind === 'vk') bridge.send('VKWebAppStorageSet', { key: KEY, value: json }).catch(() => {});
+        else if (player) player.setData({ [KEY]: data }).catch(() => {});
+        else if (tg && tg.CloudStorage && json.length <= 4096) tg.CloudStorage.setItem(KEY, json, () => {});
+      } catch (e) {}
+    }, 1500);
+  }
+
+  return { init, ready, gameplay, showInterstitial, showRewarded, load, save, hooks, get kind() { return kind; } };
+})();
+</script>
+<script>(() => {
+  const $ = id => document.getElementById(id);
+  const CAP = 4;
+  // контрастные цвета, чтобы на сложных уровнях не путались
+  const COLORS = ['#ff4d4d', '#ffd43b', '#40c057', '#339af0', '#be4bdb', '#ff922b', '#ff8cc6', '#15aabf', '#f1f3f5', '#8d5524', '#364fc7', '#495057'];
+  const WIN_COINS = 10;
+
+  let S = { lvl: 0, coins: 0, mute: false, played: 0 };
+  let tubes = [], start = [], history = [], sel = -1, undoLeft = 3, extraUsed = false, busy = false;
+
+  // ---------- звук ----------
+  let ac = null;
+  function tone(f, d = 0.1, type = 'sine', v = 0.13, delay = 0) {
+    if (S.mute) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+      const t = ac.currentTime + delay, o = ac.createOscillator(), g = ac.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(0.001, t + d);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d);
+    } catch (e) {}
+  }
+  const sfx = {
+    pick: () => tone(520, 0.07, 'triangle'),
+    drop: () => tone(330, 0.1, 'triangle'),
+    full: () => [660, 880].forEach((f, i) => tone(f, 0.15, 'sine', 0.12, i * 0.07)),
+    bad: () => tone(150, 0.2, 'sawtooth', 0.06),
+    win: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.22, 'triangle', 0.13, i * 0.09)),
+  };
+  Platform.hooks.pause = () => { if (ac) ac.suspend(); };
+  Platform.hooks.resume = () => { if (ac && !S.mute) ac.resume(); };
+  document.addEventListener('visibilitychange', () => document.hidden ? Platform.hooks.pause() : Platform.hooks.resume());
+
+  function toast(t) {
+    const el = $('toast'); el.textContent = t; el.classList.add('show');
+    clearTimeout(toast.tm); toast.tm = setTimeout(() => el.classList.remove('show'), 1300);
+  }
+  function setCoins(n) { S.coins = n; $('coins').textContent = n; $('menu-coins').textContent = n; }
+  function save() { Platform.save(S); }
+
+  // ---------- генерация уровня ----------
+  function rng(seed) {
+    return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+  }
+  const top = t => t[t.length - 1];
+  const solvedTube = t => t.length === 0 || (t.length === CAP && t.every(c => c === t[0]));
+  const isWin = ts => ts.every(solvedTube);
+
+  function canMove(ts, a, b) {
+    if (a === b || !ts[a].length || ts[b].length >= CAP) return false;
+    return !ts[b].length || top(ts[b]) === top(ts[a]);
+  }
+  function doMove(ts, a, b) {
+    const c = top(ts[a]);
+    let n = 0;
+    while (ts[a].length && top(ts[a]) === c && ts[b].length < CAP) { ts[b].push(ts[a].pop()); n++; }
+    return n;
+  }
+
+  // поиск решения в глубину с запоминанием позиций; лимит, чтобы не зависнуть
+  function solvable(init) {
+    const seen = new Set(), stack = [init.map(t => t.slice())];
+    let nodes = 0;
+    while (stack.length && nodes < 40000) {
+      const ts = stack.pop(); nodes++;
+      if (isWin(ts)) return true;
+      const key = ts.map(t => t.join('')).sort().join('|');
+      if (seen.has(key)) continue;
+      seen.add(key);
+      for (let a = 0; a < ts.length; a++) for (let b = 0; b < ts.length; b++) {
+        if (!canMove(ts, a, b)) continue;
+        // бессмысленно переливать однородную колбу в пустую
+        if (!ts[b].length && ts[a].every(c => c === ts[a][0])) continue;
+        const nx = ts.map(t => t.slice()); doMove(nx, a, b); stack.push(nx);
+      }
+    }
+    return false;
+  }
+
+  function makeLevel(lvl) {
+    // +1 цвет каждые 3 уровня, максимум 12
+    const colors = Math.min(3 + Math.floor(lvl / 3), COLORS.length);
+    const empties = 2;
+    for (let seed = lvl * 9973 + 7; ; seed++) {
+      const r = rng(seed);
+      const balls = [];
+      for (let c = 0; c < colors; c++) for (let k = 0; k < CAP; k++) balls.push(c);
+      for (let i = balls.length - 1; i > 0; i--) { const j = r() * (i + 1) | 0; [balls[i], balls[j]] = [balls[j], balls[i]]; }
+      const ts = [];
+      for (let c = 0; c < colors; c++) ts.push(balls.slice(c * CAP, c * CAP + CAP));
+      for (let e = 0; e < empties; e++) ts.push([]);
+      if (ts.some(t => t.length && solvedTube(t))) continue;
+      if (solvable(ts)) return ts;
+    }
+  }
+
+  // ---------- отрисовка ----------
+  function render() {
+    const board = $('board');
+    const n = tubes.length;
+    const W = $('board-wrap').clientWidth - 16, H = $('board-wrap').clientHeight - 16;
+    const rows = n > 7 ? 2 : 1, per = Math.ceil(n / rows);
+    const gap = Math.max(8, Math.min(22, W / per * 0.25));
+    let tw = Math.min(70, (W - gap * (per - 1)) / per);
+    const ratio = 3.6;
+    tw = Math.min(tw, (H - gap * (rows - 1) - 30 * rows) / rows / ratio);
+    board.style.setProperty('--tw', tw + 'px');
+    board.style.setProperty('--th', tw * ratio + 'px');
+    board.style.setProperty('--gap', gap + 'px');
+    board.style.maxWidth = per * (tw + gap) + 'px';
+    board.style.rowGap = gap * 2 + 'px';
+    board.innerHTML = tubes.map((t, i) =>
+      `<div class="tube${i === sel ? ' sel' : ''}${t.length === CAP && solvedTube(t) ? ' done' : ''}" data-i="${i}">` +
+      t.map(c => `<div class="ball" style="--c:${COLORS[c]}"></div>`).join('') + '</div>').join('');
+    $('undo-left').textContent = undoLeft > 0 ? undoLeft : '▶';
+    $('addtube').style.opacity = extraUsed ? 0.4 : 1;
+  }
+
+  $('board').addEventListener('click', e => {
+    const el = e.target.closest('.tube');
+    if (!el || busy) return;
+    const i = +el.dataset.i;
+    if (sel === -1) {
+      if (!tubes[i].length || (tubes[i].length === CAP && solvedTube(tubes[i]))) return;
+      sel = i; sfx.pick();
+    } else if (sel === i) {
+      sel = -1;
+    } else if (canMove(tubes, sel, i)) {
+      history.push(tubes.map(t => t.slice()));
+      doMove(tubes, sel, i);
+      sel = -1;
+      if (tubes[i].length === CAP && solvedTube(tubes[i])) sfx.full(); else sfx.drop();
+      if (isWin(tubes)) { render(); return win(); }
+    } else {
+      el.classList.add('shake'); sfx.bad();
+      setTimeout(() => el.classList.remove('shake'), 300);
+      sel = tubes[i].length ? i : -1;
+    }
+    render();
+  });
+
+  function startLevel() {
+    tubes = makeLevel(S.lvl);
+    start = tubes.map(t => t.slice());
+    history = []; sel = -1; undoLeft = 3; extraUsed = false; busy = false;
+    document.body.style.setProperty('--h', (200 + S.lvl * 47) % 360);
+    $('level-title').textContent = `Уровень ${S.lvl + 1}`;
+    render();
+    Platform.gameplay(true);
+  }
+
+  // ---------- кнопки ----------
+  $('undo').onclick = async () => {
+    if (busy || !history.length) return;
+    if (undoLeft <= 0) {
+      busy = true;
+      const ok = await Platform.showRewarded();
+      busy = false;
+      if (!ok) return toast('Отмены за просмотр рекламы');
+      undoLeft = 3;
+    }
+    tubes = history.pop(); undoLeft--; sel = -1; render();
+  };
+  $('restart').onclick = () => {
+    if (busy) return;
+    tubes = start.map(t => t.slice()); history = []; sel = -1;
+    if (extraUsed) tubes.push([]);
+    render();
+  };
+  $('addtube').onclick = async () => {
+    if (busy || extraUsed) return;
+    busy = true;
+    const ok = await Platform.showRewarded();
+    busy = false;
+    if (!ok) return toast('Колба за просмотр рекламы');
+    extraUsed = true; tubes.push([]); render(); toast('Новая колба!');
+  };
+
+  let doubled = false;
+  function win() {
+    busy = true;
+    Platform.gameplay(false);
+    setTimeout(() => {
+      sfx.win(); doubled = false;
+      $('win-coins').textContent = WIN_COINS;
+      $('win-text').textContent = `Уровень ${S.lvl + 1} пройден`;
+      $('double').style.display = '';
+      $('win').classList.add('show');
+      setCoins(S.coins + WIN_COINS);
+      S.lvl++; S.played++; save();
+    }, 400);
+  }
+  $('double').onclick = async () => {
+    if (doubled) return;
+    const ok = await Platform.showRewarded();
+    if (!ok) return toast('Награда за просмотр рекламы');
+    doubled = true; setCoins(S.coins + WIN_COINS);
+    $('win-coins').textContent = WIN_COINS * 2; $('double').style.display = 'none'; save();
+  };
+  $('next').onclick = async () => {
+    $('win').classList.remove('show');
+    if (S.played >= 3 && !doubled) await Platform.showInterstitial();
+    startLevel();
+  };
+  $('play').onclick = () => { show('game'); startLevel(); };
+  $('home').onclick = () => { Platform.gameplay(false); show('menu'); };
+  $('mute').onclick = () => {
+    S.mute = !S.mute; $('mute').textContent = S.mute ? '🔇' : '🔊';
+    S.mute ? Platform.hooks.pause() : Platform.hooks.resume(); save();
+  };
+  function show(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+    $('play').textContent = S.lvl ? `Уровень ${S.lvl + 1}` : 'Играть';
+  }
+  window.addEventListener('resize', () => tubes.length && render());
+
+  // для автотестов
+  window.__sort = { makeLevel, solvable, get tubes() { return tubes; } };
+
+  (async () => {
+    await Platform.init();
+    const saved = await Platform.load();
+    if (saved) S = Object.assign(S, saved);
+    setCoins(S.coins);
+    $('mute').textContent = S.mute ? '🔇' : '🔊';
+    show('menu');
+    Platform.ready();
+    if (Platform.kind === 'local' && new URLSearchParams(location.search).has('autoplay')) $('play').click();
+  })();
+})();
+</script>
+</body>
+</html>

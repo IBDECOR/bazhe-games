@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Блок Дроп</title>
+<style>*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none}
+body{background:radial-gradient(circle at 50% 0%,#20305f,#0b1024 70%)}
+#app{position:relative;height:100%;max-width:520px;margin:0 auto;display:flex;flex-direction:column}
+button{font:inherit;color:inherit;border:0;background:none;cursor:pointer}
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px}
+.sc{background:#ffffff14;border-radius:14px;padding:4px 14px;text-align:center;min-width:86px}
+.sc small,.next small{display:block;font-size:10px;opacity:.7;letter-spacing:1px}
+.sc b{font-size:22px}
+.next{text-align:center}
+.next i{display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:12px;font-style:normal;font-weight:900;font-size:18px;margin:2px auto 0;box-shadow:inset 0 -4px 0 #0003}
+.icon{width:38px;height:38px;border-radius:12px;background:#ffffff18;font-size:18px}
+#wrap{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:4px 10px}
+canvas{display:block;border-radius:18px;touch-action:none}
+.tools{display:flex;justify-content:center;gap:16px;padding:8px 0 max(14px,env(safe-area-inset-bottom))}
+.tool{width:96px;height:56px;border-radius:16px;background:#ffffff18;font-size:22px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.tool small{font-size:11px;font-weight:700}
+.tool.on{background:#ffd43b;color:#3b2300}
+.overlay{position:absolute;inset:0;background:#05081acc;display:none;align-items:center;justify-content:center;z-index:10}
+.overlay.show{display:flex}
+.card{background:linear-gradient(#2b3f86,#1a2556);border-radius:28px;padding:30px 26px;display:flex;flex-direction:column;align-items:center;gap:16px;width:min(88%,360px);box-shadow:0 20px 50px #0008;text-align:center;animation:pop .35s}
+@keyframes pop{0%{transform:scale(.6)}70%{transform:scale(1.06)}100%{transform:scale(1)}}
+.logo{display:flex;flex-direction:column;font-weight:900;font-size:64px;line-height:.9;text-shadow:0 6px 0 #0006}
+.logo span:last-child{color:#ffd43b}
+.card h2{font-size:32px;color:#ffd43b}
+.card p{font-size:18px}
+.big{background:linear-gradient(#ffd43b,#f59f00);color:#3b2300;font-weight:900;font-size:22px;padding:14px 40px;border-radius:30px;box-shadow:0 6px 0 #b86e00;width:100%}
+.big.alt{background:linear-gradient(#69db7c,#2f9e44);color:#fff;box-shadow:0 6px 0 #1e6b2e;font-size:19px}
+.big:active{transform:translateY(4px);box-shadow:0 2px 0 #b86e00}
+#toast{position:absolute;left:50%;top:80px;transform:translateX(-50%);background:#000c;padding:10px 18px;border-radius:14px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none;z-index:20;white-space:nowrap}
+#toast.show{opacity:1}
+.fake-ad{position:fixed;inset:0;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;z-index:100}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="sc"><small>СЧЁТ</small><b id="score">0</b></div>
+    <div class="next"><small>ДАЛЬШЕ</small><i id="next"></i></div>
+    <div class="sc"><small>РЕКОРД</small><b id="best">0</b></div>
+    <button id="mute" class="icon">🔊</button>
+  </header>
+  <div id="wrap"><canvas id="cv"></canvas></div>
+  <div class="tools">
+    <button id="hammer" class="tool">🔨<small>▶ молот</small></button>
+    <button id="swap" class="tool">🔄<small>сменить <b id="swaps">3</b></small></button>
+  </div>
+
+  <div id="menu" class="overlay show">
+    <div class="card">
+      <div class="logo"><span>БЛОК</span><span>ДРОП</span></div>
+      <p>Кидай блоки, одинаковые склеиваются!</p>
+      <button id="play" class="big">Играть</button>
+    </div>
+  </div>
+  <div id="over" class="overlay">
+    <div class="card">
+      <h2>Игра окончена</h2>
+      <p>Счёт: <b id="final">0</b></p>
+      <button id="revive" class="big alt">▶ Продолжить</button>
+      <button id="again" class="big">Заново</button>
+    </div>
+  </div>
+  <div id="toast"></div>
+</div>
+<script>window.BAZHE_TARGET="telegram";window.BAZHE_ADS={"tgInter": "", "tgReward": "", "rsyaInter": "", "rsyaReward": ""};</script><script>// Адаптер площадок: Яндекс Игры, VK/OK (VK Bridge), Telegram Mini App (Adsgram),
+// RuStore APK (РСЯ в WebView), локальный запуск.
+// Площадку можно задать явно: window.BAZHE_TARGET = 'telegram' | 'rustore' (ставит сборщик).
+// ID рекламных блоков берутся из window.BAZHE_ADS (тоже ставит сборщик).
+const Platform = (() => {
+  const qs = new URLSearchParams(location.search);
+  const ADS = window.BAZHE_ADS || {};
+  let kind = window.BAZHE_TARGET || 'local';
+  if (kind === 'local') {
+    if (qs.has('vk_app_id') || qs.has('vk_platform')) kind = 'vk';
+    else if (/yandex|playhop/.test(location.hostname)) kind = 'yandex';
+  }
+
+  const INTER_COOLDOWN = 60000;
+  let ysdk = null, player = null, bridge = null, tg = null, lastInter = Date.now();
+  let adsInter = null, adsReward = null;
+  const hooks = { pause: () => {}, resume: () => {} };
+
+  function loadScript(src) {
+    return new Promise((ok, fail) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = ok; s.onerror = fail;
+      document.head.appendChild(s);
+    });
+  }
+  function withTimeout(p, ms) {
+    return Promise.race([p, new Promise((_, fail) => setTimeout(() => fail(new Error('timeout')), ms))]);
+  }
+
+  async function init() {
+    try {
+      if (kind === 'yandex') {
+        await withTimeout(loadScript('/sdk.js'), 6000);
+        ysdk = await withTimeout(YaGames.init(), 6000);
+        try { player = await ysdk.getPlayer({ scopes: false }); } catch (e) { player = null; }
+        ysdk.on && ysdk.on('game_api_pause', () => hooks.pause());
+        ysdk.on && ysdk.on('game_api_resume', () => hooks.resume());
+      } else if (kind === 'vk') {
+        await withTimeout(loadScript('https://unpkg.com/@vkontakte/vk-bridge@2.14.1/dist/browser.min.js'), 6000);
+        bridge = window.vkBridge;
+        await bridge.send('VKWebAppInit');
+        bridge.subscribe(e => {
+          const t = e.detail && e.detail.type;
+          if (t === 'VKWebAppViewHide') hooks.pause();
+          if (t === 'VKWebAppViewRestore') hooks.resume();
+        });
+        preloadVk();
+      } else if (kind === 'telegram') {
+        await withTimeout(loadScript('https://telegram.org/js/telegram-web-app.js'), 6000);
+        tg = window.Telegram && window.Telegram.WebApp;
+        if (tg) { tg.ready(); tg.expand(); tg.disableVerticalSwipes && tg.disableVerticalSwipes(); }
+        try {
+          await withTimeout(loadScript('https://sad.adsgram.ai/js/sad.min.js'), 6000);
+          if (ADS.tgInter) adsInter = window.Adsgram.init({ blockId: ADS.tgInter });
+          if (ADS.tgReward) adsReward = window.Adsgram.init({ blockId: ADS.tgReward });
+        } catch (e) { console.warn('adsgram not loaded', e); }
+      } else if (kind === 'rustore') {
+        // реклама РСЯ (веб-блоки) внутри WebView приложения
+        window.yaContextCb = window.yaContextCb || [];
+        loadScript('https://yandex.ru/ads/system/context.js').catch(() => {});
+      }
+    } catch (e) {
+      console.warn('platform init failed, local mode', e);
+      kind = 'local';
+    }
+  }
+
+  function preloadVk() {
+    bridge.send('VKWebAppCheckNativeAds', { ad_format: 'interstitial' }).catch(() => {});
+    bridge.send('VKWebAppCheckNativeAds', { ad_format: 'reward' }).catch(() => {});
+  }
+
+  function ready() {
+    try { ysdk && ysdk.features.LoadingAPI && ysdk.features.LoadingAPI.ready(); } catch (e) {}
+  }
+  function gameplay(on) {
+    try {
+      const g = ysdk && ysdk.features.GameplayAPI;
+      if (g) on ? g.start() : g.stop();
+    } catch (e) {}
+  }
+
+  // РСЯ: полноэкранный/вознаграждаемый блок; true — досмотрен
+  function rsya(blockId, type) {
+    return new Promise(done => {
+      if (!blockId || !window.yaContextCb) return done(false);
+      let finished = false;
+      const finish = ok => { if (finished) return; finished = true; hooks.resume(); done(ok); };
+      hooks.pause();
+      window.yaContextCb.push(() => {
+        try {
+          Ya.Context.AdvManager.render({
+            blockId, type, platform: 'touch',
+            onRewarded: () => finish(true),
+            onClose: () => finish(type !== 'rewarded'),
+            onError: () => finish(false),
+          });
+        } catch (e) { finish(false); }
+      });
+      setTimeout(() => finish(false), 60000);
+    });
+  }
+
+  function showInterstitial() {
+    if (Date.now() - lastInter < INTER_COOLDOWN) return Promise.resolve(false);
+    lastInter = Date.now();
+    if (kind === 'yandex') {
+      return new Promise(done => {
+        ysdk.adv.showFullscreenAdv({ callbacks: {
+          onOpen: () => hooks.pause(),
+          onClose: shown => { hooks.resume(); done(shown); },
+          onError: () => { hooks.resume(); done(false); },
+        } });
+      });
+    }
+    if (kind === 'vk') {
+      hooks.pause();
+      return bridge.send('VKWebAppShowNativeAds', { ad_format: 'interstitial' })
+        .then(d => !!(d && d.result)).catch(() => false)
+        .finally(() => { hooks.resume(); preloadVk(); });
+    }
+    if (kind === 'telegram') {
+      if (!adsInter) return Promise.resolve(false);
+      hooks.pause();
+      return adsInter.show().then(() => true).catch(() => false).finally(() => hooks.resume());
+    }
+    if (kind === 'rustore') return rsya(ADS.rsyaInter, 'fullscreen');
+    console.log('[ads] interstitial (локально)');
+    return Promise.resolve(false);
+  }
+
+  // true только если реклама досмотрена и награда положена
+  function showRewarded() {
+    if (kind === 'yandex') {
+      return new Promise(done => {
+        let rewarded = false, finished = false;
+        const finish = () => { if (finished) return; finished = true; hooks.resume(); done(rewarded); };
+        ysdk.adv.showRewardedVideo({ callbacks: {
+          onOpen: () => hooks.pause(),
+          onRewarded: () => { rewarded = true; },
+          onClose: finish,
+          onError: finish,
+        } });
+      });
+    }
+    if (kind === 'vk') {
+      hooks.pause();
+      return bridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
+        .then(d => !!(d && d.result)).catch(() => false)
+        .finally(() => { hooks.resume(); lastInter = Date.now(); preloadVk(); });
+    }
+    if (kind === 'telegram') {
+      if (!adsReward) return Promise.resolve(false);
+      hooks.pause();
+      // Adsgram: resolve с done=true — досмотрено до конца
+      return adsReward.show().then(r => !!(r && r.done)).catch(() => false)
+        .finally(() => { hooks.resume(); lastInter = Date.now(); });
+    }
+    if (kind === 'rustore') return rsya(ADS.rsyaReward, 'rewarded').then(ok => { lastInter = Date.now(); return ok; });
+    return fakeAd();
+  }
+
+  function fakeAd() {
+    return new Promise(done => {
+      const el = document.createElement('div');
+      el.className = 'fake-ad';
+      el.textContent = 'Реклама (тест)…';
+      document.body.appendChild(el);
+      hooks.pause();
+      setTimeout(() => { el.remove(); hooks.resume(); done(true); }, 1200);
+    });
+  }
+
+  const KEY = 'blokdrop_save';
+
+  async function load() {
+    const all = [];
+    try { const s = localStorage.getItem(KEY); if (s) all.push(JSON.parse(s)); } catch (e) {}
+    try {
+      if (kind === 'vk') {
+        const r = await withTimeout(bridge.send('VKWebAppStorageGet', { keys: [KEY] }), 3000);
+        const v = r.keys && r.keys[0] && r.keys[0].value;
+        if (v) all.push(JSON.parse(v));
+      } else if (player) {
+        const d = await withTimeout(player.getData([KEY]), 3000);
+        if (d && d[KEY]) all.push(d[KEY]);
+      } else if (tg && tg.CloudStorage) {
+        const v = await withTimeout(new Promise(ok => tg.CloudStorage.getItem(KEY, (e, val) => ok(e ? null : val))), 3000);
+        if (v) all.push(JSON.parse(v));
+      }
+    } catch (e) {}
+    // берём самый продвинутый сейв
+    all.sort((a, b) => (b.lvl || 0) - (a.lvl || 0) || (b.ts || 0) - (a.ts || 0));
+    return all[0] || null;
+  }
+
+  let saveTimer = null;
+  function save(data) {
+    data.ts = Date.now();
+    const json = JSON.stringify(data);
+    try { localStorage.setItem(KEY, json); } catch (e) {}
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        if (kind === 'vk') bridge.send('VKWebAppStorageSet', { key: KEY, value: json }).catch(() => {});
+        else if (player) player.setData({ [KEY]: data }).catch(() => {});
+        else if (tg && tg.CloudStorage && json.length <= 4096) tg.CloudStorage.setItem(KEY, json, () => {});
+      } catch (e) {}
+    }, 1500);
+  }
+
+  return { init, ready, gameplay, showInterstitial, showRewarded, load, save, hooks, get kind() { return kind; } };
+})();
+</script>
+<script>(() => {
+  const $ = id => document.getElementById(id);
+  const COLS = 5, ROWS = 7;
+  // цвет по степени двойки
+  const COL = ['#000', '#ff6b6b', '#ffa94d', '#ffd43b', '#94d82d', '#38d9a9', '#4dabf7', '#748ffc', '#da77f2', '#f783ac', '#e64980', '#fd7e14', '#fab005', '#12b886', '#15aabf', '#7950f2', '#ffffff'];
+  const exp = v => Math.round(Math.log2(v));
+  const colorOf = v => COL[Math.min(exp(v), COL.length - 1)];
+  const label = v => v >= 1e6 ? (v / 1e6).toFixed(v >= 1e7 ? 0 : 1) + 'M' : v >= 10000 ? Math.round(v / 1000) + 'K' : String(v);
+
+  let S = { best: 0, mute: false, games: 0 };
+  let grid, score, nextV, busy, over, revived, swaps, hammer, hoverCol = -1, uid = 0;
+  const parts = [], floats = [];
+  let shake = 0;
+
+  // ---------- звук ----------
+  let ac = null;
+  function tone(f, d = .1, type = 'triangle', v = .1, delay = 0) {
+    if (S.mute) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+      const t = ac.currentTime + delay, o = ac.createOscillator(), g = ac.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(v, t); g.gain.exponentialRampToValueAtTime(.001, t + d);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d);
+    } catch (e) {}
+  }
+  const sfx = {
+    drop: () => tone(180, .08, 'sine', .15),
+    merge: n => tone(300 + n * 90, .15, 'triangle', .12),
+    combo: n => [0, 1, 2].forEach(i => tone(500 + n * 60 + i * 150, .12, 'square', .05, i * .06)),
+    over: () => [400, 300, 200].forEach((f, i) => tone(f, .25, 'sawtooth', .06, i * .15)),
+  };
+  Platform.hooks.pause = () => { if (ac) ac.suspend(); };
+  Platform.hooks.resume = () => { if (ac && !S.mute) ac.resume(); };
+  document.addEventListener('visibilitychange', () => document.hidden ? Platform.hooks.pause() : Platform.hooks.resume());
+
+  function toast(t) {
+    const el = $('toast'); el.textContent = t; el.classList.add('show');
+    clearTimeout(toast.tm); toast.tm = setTimeout(() => el.classList.remove('show'), 1400);
+  }
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+
+  // ---------- поле ----------
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  let cell = 60, pad = 8, dpr = 1;
+  function resize() {
+    const wrap = $('wrap');
+    const W = wrap.clientWidth - 20, H = wrap.clientHeight - 8;
+    cell = Math.floor(Math.min((W - pad * 2) / COLS, (H - pad * 2 - 20) / ROWS, 84));
+    dpr = window.devicePixelRatio || 1;
+    const w = cell * COLS + pad * 2, h = cell * ROWS + pad * 2;
+    cv.width = w * dpr; cv.height = h * dpr;
+    cv.style.width = w + 'px'; cv.style.height = h + 'px';
+  }
+  window.addEventListener('resize', resize);
+
+  function newGrid() { return Array.from({ length: ROWS }, () => Array(COLS).fill(null)); }
+  function maxOnBoard() {
+    let m = 2;
+    for (const row of grid) for (const b of row) if (b && b.v > m) m = b.v;
+    return m;
+  }
+  function genNext() {
+    // чем больше блоки на поле, тем крупнее приходят новые
+    const top = Math.max(3, Math.min(7, exp(maxOnBoard()) - 3));
+    const e = 1 + Math.floor(Math.pow(Math.random(), 1.6) * top);
+    return Math.pow(2, e);
+  }
+  function setNext(v) {
+    nextV = v;
+    const el = $('next');
+    el.textContent = label(v); el.style.background = colorOf(v);
+  }
+  function setScore(v) {
+    score = v; $('score').textContent = label(score);
+    if (score > S.best) { S.best = score; $('best').textContent = label(S.best); }
+  }
+
+  // ---------- логика ----------
+  const mk = (v, r, c) => ({ v, id: ++uid, x: c, y: r, s: 1 });
+  function gravity() {
+    let moved = [];
+    for (let c = 0; c < COLS; c++) {
+      let w = ROWS - 1;
+      for (let r = ROWS - 1; r >= 0; r--) {
+        const b = grid[r][c];
+        if (!b) continue;
+        if (r !== w) { grid[w][c] = b; grid[r][c] = null; moved.push([w, c]); }
+        w--;
+      }
+    }
+    return moved;
+  }
+  const NB = [[0, 1], [0, -1], [1, 0], [-1, 0]];
+  function mergeAt(r, c) {
+    const b = grid[r][c]; if (!b) return false;
+    const same = NB.map(([dr, dc]) => [r + dr, c + dc])
+      .filter(([rr, cc]) => rr >= 0 && rr < ROWS && cc >= 0 && cc < COLS && grid[rr][cc] && grid[rr][cc].v === b.v);
+    if (!same.length) return false;
+    for (const [rr, cc] of same) {
+      const o = grid[rr][cc];
+      o.tx = c; o.ty = r; o.dying = true; // анимация втягивания
+      dying.push(o);
+      grid[rr][cc] = null;
+    }
+    b.v *= Math.pow(2, same.length);
+    b.s = 1.35;
+    return true;
+  }
+  const dying = [];
+
+  async function drop(c) {
+    if (busy || over) return;
+    if (grid[0][c]) {
+      if (grid[0].every(Boolean)) return gameOver();
+      shake = 6; return;
+    }
+    busy = true;
+    let r = ROWS - 1;
+    while (grid[r][c]) r--;
+    const b = mk(nextV, r, c); b.y = -1;
+    grid[r][c] = b;
+    sfx.drop();
+    setNext(genNext());
+    await wait(140);
+    await resolve([[r, c]]);
+    busy = false;
+    if (grid[0].every(Boolean)) gameOver();
+    save();
+  }
+
+  async function resolve(queue) {
+    let combo = 0;
+    while (queue.length) {
+      const [r, c] = queue.shift();
+      const b = grid[r][c];
+      if (!b || !mergeAt(r, c)) continue;
+      combo++;
+      const v = b.v;
+      setScore(score + v);
+      burst(c, r, colorOf(v), 14 + combo * 4);
+      floats.push({ x: c, y: r, t: '+' + label(v), a: 1 });
+      sfx.merge(combo);
+      if (combo >= 2) { floats.push({ x: COLS / 2 - .5, y: 2, t: `КОМБО x${combo}!`, a: 1.4, big: 1 }); sfx.combo(combo); shake = 4 + combo * 2; }
+      await wait(170);
+      dying.length = 0;
+      const moved = gravity();
+      await wait(140);
+      // после падения проверяем сам блок и всё, что сдвинулось
+      const id = b.id;
+      let pos = [r, c];
+      for (let rr = 0; rr < ROWS; rr++) for (let cc = 0; cc < COLS; cc++) if (grid[rr][cc] && grid[rr][cc].id === id) pos = [rr, cc];
+      queue.unshift(pos, ...moved);
+    }
+  }
+
+  async function gameOver() {
+    over = true;
+    sfx.over();
+    Platform.gameplay(false);
+    $('final').textContent = label(score);
+    $('revive').style.display = revived ? 'none' : '';
+    $('over').classList.add('show');
+    S.games++; save();
+  }
+
+  function start() {
+    grid = newGrid(); over = false; busy = false; revived = false; swaps = 3; hammer = false;
+    setScore(0);
+    // стартовые блоки внизу
+    [[ROWS - 1, 1, 2], [ROWS - 1, 3, 4]].forEach(([r, c, v]) => grid[r][c] = mk(v, r, c));
+    setNext(2);
+    $('swaps').textContent = swaps;
+    $('hammer').classList.remove('on');
+    ['menu', 'over'].forEach(id => $(id).classList.remove('show'));
+    Platform.gameplay(true);
+  }
+
+  // ---------- эффекты ----------
+  function burst(c, r, color, n) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * 6.28, sp = 2 + Math.random() * 5;
+      parts.push({ x: (c + .5) * cell + pad, y: (r + .5) * cell + pad, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2, life: 1, color });
+    }
+  }
+
+  function rr(x, y, w, h, rad) {
+    ctx.beginPath(); ctx.moveTo(x + rad, y); ctx.arcTo(x + w, y, x + w, y + h, rad); ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad); ctx.arcTo(x, y, x + w, y, rad); ctx.closePath();
+  }
+  function drawBlock(b, x, y, s = 1) {
+    const sz = cell - 6, cx = x + cell / 2, cy = y + cell / 2;
+    const w = sz * s;
+    const col = colorOf(b.v);
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; rr(cx - w / 2, cy - w / 2 + 4, w, w, w * .22); ctx.fill();
+    ctx.fillStyle = col; rr(cx - w / 2, cy - w / 2, w, w, w * .22); ctx.fill();
+    const g = ctx.createLinearGradient(0, cy - w / 2, 0, cy + w / 2);
+    g.addColorStop(0, 'rgba(255,255,255,.35)'); g.addColorStop(.5, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,.18)');
+    ctx.fillStyle = g; rr(cx - w / 2, cy - w / 2, w, w, w * .22); ctx.fill();
+    const t = label(b.v);
+    ctx.fillStyle = exp(b.v) >= 16 ? '#222' : '#fff';
+    ctx.font = `900 ${w * (t.length > 3 ? .3 : t.length > 2 ? .36 : .44)}px Trebuchet MS, Arial`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowOffsetY = 2;
+    ctx.fillText(t, cx, cy + 1);
+    ctx.shadowColor = 'transparent';
+  }
+
+  function frame() {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const W = cell * COLS + pad * 2, H = cell * ROWS + pad * 2;
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    if (shake > 0) { ctx.translate((Math.random() - .5) * shake, (Math.random() - .5) * shake); shake *= .85; if (shake < .3) shake = 0; }
+    ctx.fillStyle = '#ffffff0d'; rr(0, 0, W, H, 18); ctx.fill();
+    for (let c = 0; c < COLS; c++) {
+      ctx.fillStyle = c === hoverCol && !busy && !over ? '#ffffff1f' : c % 2 ? '#ffffff08' : '#ffffff03';
+      ctx.fillRect(pad + c * cell, pad, cell, cell * ROWS);
+    }
+    // призрак следующего блока над выбранной колонкой
+    if (hoverCol >= 0 && !busy && !over && !hammer) {
+      ctx.globalAlpha = .35; drawBlock({ v: nextV }, pad + hoverCol * cell, pad); ctx.globalAlpha = 1;
+    }
+    for (const b of dying) {
+      b.x += (b.tx - b.x) * .35; b.y += (b.ty - b.y) * .35;
+      ctx.globalAlpha = .8; drawBlock(b, pad + b.x * cell, pad + b.y * cell, .8); ctx.globalAlpha = 1;
+    }
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+      const b = grid && grid[r][c]; if (!b) continue;
+      b.x += (c - b.x) * .4; b.y += (r - b.y) * .35;
+      b.s += (1 - b.s) * .2;
+      drawBlock(b, pad + b.x * cell, pad + b.y * cell, b.s);
+      if (hammer) { ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 2; rr(pad + c * cell + 4, pad + r * cell + 4, cell - 8, cell - 8, 10); ctx.stroke(); }
+    }
+    for (let i = parts.length - 1; i >= 0; i--) {
+      const p = parts[i];
+      p.x += p.vx; p.y += p.vy; p.vy += .25; p.life -= .03;
+      if (p.life <= 0) { parts.splice(i, 1); continue; }
+      ctx.globalAlpha = p.life; ctx.fillStyle = p.color;
+      ctx.fillRect(p.x - 3, p.y - 3, 6, 6);
+    }
+    ctx.globalAlpha = 1;
+    for (let i = floats.length - 1; i >= 0; i--) {
+      const f = floats[i];
+      f.y -= .02; f.a -= .02;
+      if (f.a <= 0) { floats.splice(i, 1); continue; }
+      ctx.globalAlpha = Math.min(1, f.a);
+      ctx.font = `900 ${f.big ? cell * .6 : cell * .32}px Trebuchet MS, Arial`;
+      ctx.fillStyle = f.big ? '#ffd43b' : '#fff'; ctx.textAlign = 'center';
+      ctx.strokeStyle = '#0008'; ctx.lineWidth = 4;
+      ctx.strokeText(f.t, pad + (f.x + .5) * cell, pad + (f.y + .3) * cell);
+      ctx.fillText(f.t, pad + (f.x + .5) * cell, pad + (f.y + .3) * cell);
+    }
+    ctx.globalAlpha = 1;
+    ctx.restore();
+    requestAnimationFrame(frame);
+  }
+
+  // ---------- ввод ----------
+  function colAt(e) {
+    const b = cv.getBoundingClientRect();
+    const c = Math.floor((e.clientX - b.left - pad) / cell);
+    return c >= 0 && c < COLS ? c : -1;
+  }
+  cv.addEventListener('pointermove', e => { hoverCol = colAt(e); });
+  cv.addEventListener('pointerleave', () => { hoverCol = -1; });
+  cv.addEventListener('pointerdown', async e => {
+    const c = colAt(e); if (c < 0) return;
+    if (hammer) {
+      const b = cv.getBoundingClientRect();
+      const r = Math.floor((e.clientY - b.top - pad) / cell);
+      if (r >= 0 && r < ROWS && grid[r][c]) {
+        burst(c, r, colorOf(grid[r][c].v), 24); shake = 8; grid[r][c] = null;
+        hammer = false; $('hammer').classList.remove('on');
+        busy = true; const moved = gravity(); await wait(150); await resolve(moved); busy = false;
+      }
+      return;
+    }
+    hoverCol = c;
+    drop(c);
+  });
+
+  $('hammer').onclick = async () => {
+    if (busy || over) return;
+    if (hammer) { hammer = false; $('hammer').classList.remove('on'); return; }
+    const ok = await Platform.showRewarded();
+    if (!ok) return toast('Молот за просмотр рекламы');
+    hammer = true; $('hammer').classList.add('on'); toast('Нажми на блок, чтобы разбить');
+  };
+  $('swap').onclick = () => {
+    if (busy || over || swaps <= 0) return;
+    swaps--; $('swaps').textContent = swaps;
+    let v; do v = genNext(); while (v === nextV);
+    setNext(v);
+  };
+  $('play').onclick = start;
+  $('again').onclick = async () => { await Platform.showInterstitial(); start(); };
+  $('revive').onclick = async () => {
+    const ok = await Platform.showRewarded();
+    if (!ok) return toast('Продолжение за просмотр рекламы');
+    revived = true; over = false;
+    // убираем три верхних ряда
+    for (let r = 0; r < 3; r++) for (let c = 0; c < COLS; c++) if (grid[r][c]) { burst(c, r, colorOf(grid[r][c].v), 8); grid[r][c] = null; }
+    $('over').classList.remove('show');
+    Platform.gameplay(true);
+  };
+  $('mute').onclick = () => {
+    S.mute = !S.mute; $('mute').textContent = S.mute ? '🔇' : '🔊';
+    S.mute ? Platform.hooks.pause() : Platform.hooks.resume(); save();
+  };
+  const save = () => Platform.save(S);
+
+  // для автотестов
+  window.__b = { drop, get grid() { return grid; }, get score() { return score; }, get over() { return over; }, get busy() { return busy; } };
+
+  (async () => {
+    await Platform.init();
+    const saved = await Platform.load();
+    if (saved) S = Object.assign(S, saved);
+    $('best').textContent = label(S.best);
+    $('mute').textContent = S.mute ? '🔇' : '🔊';
+    resize();
+    grid = newGrid(); setNext(2); score = 0;
+    requestAnimationFrame(frame);
+    Platform.ready();
+  })();
+})();
+</script>
+</body>
+</html>

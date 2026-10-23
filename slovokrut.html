@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Словокрут</title>
+<style>*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:#2a1b5e;font-family:"Trebuchet MS","Segoe UI",Arial,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none}
+#app{position:relative;height:100%;width:100%;max-width:560px;margin:0 auto;--h1:265;--h2:320}
+body{background:linear-gradient(160deg,hsl(var(--h1,265) 60% 32%),hsl(var(--h2,320) 65% 40%))}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;align-items:center}
+.screen.active{display:flex}
+button{font:inherit;color:inherit;border:0;cursor:pointer}
+
+#menu{justify-content:center;gap:22px}
+.logo{display:flex;flex-direction:column;align-items:center;font-weight:900;font-size:clamp(48px,15vw,84px);line-height:.95;letter-spacing:2px;text-shadow:0 6px 0 rgba(0,0,0,.25)}
+.logo span:last-child{color:#ffd43b}
+.tagline{opacity:.85;font-size:18px}
+.big{background:linear-gradient(#ffd43b,#f59f00);color:#3b2300;font-weight:800;font-size:24px;padding:16px 56px;border-radius:40px;box-shadow:0 6px 0 #b86e00,0 10px 24px rgba(0,0,0,.3);transition:transform .1s}
+.big:active{transform:translateY(4px);box-shadow:0 2px 0 #b86e00}
+.big.alt{background:linear-gradient(#69db7c,#2f9e44);color:#fff;box-shadow:0 6px 0 #1e6b2e,0 10px 24px rgba(0,0,0,.3);font-size:19px;padding:12px 30px}
+.coin{display:inline-block;width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff3b0,#fab005 55%,#e67700);box-shadow:inset 0 -2px 0 rgba(0,0,0,.2);vertical-align:middle}
+.menu-coins,.coins{display:flex;align-items:center;gap:6px;font-size:20px;font-weight:800}
+
+.bar{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px}
+#level-title{flex:1;font-weight:800;font-size:20px}
+.coins{background:rgba(0,0,0,.25);padding:4px 12px;border-radius:20px}
+.icon{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.15);font-size:20px}
+
+#board-wrap{flex:1;width:100%;display:flex;align-items:center;justify-content:center;padding:4px 12px;min-height:0}
+#board{position:relative}
+.cell{position:absolute;border-radius:18%;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-weight:900;text-transform:uppercase;color:transparent;transition:background .2s}
+.cell.open{background:#fff;color:#3b1d7a;animation:pop .35s ease-out}
+.cell.hinted{background:#fff3bf}
+.cell.flash{background:#ffd43b!important}
+@keyframes pop{0%{transform:scale(.4)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
+
+#preview{height:44px;display:flex;align-items:center;gap:3px;margin:4px 0}
+#preview span{background:#fff;color:#3b1d7a;font-weight:900;font-size:24px;min-width:34px;height:40px;padding:0 4px;border-radius:9px;display:flex;align-items:center;justify-content:center;text-transform:uppercase}
+#preview.good span{background:#69db7c;color:#fff}
+#preview.bad{animation:shake .35s}
+#preview.bad span{background:#ff6b6b;color:#fff}
+#preview.dup span{background:#adb5bd;color:#fff}
+@keyframes shake{25%{transform:translateX(-10px)}75%{transform:translateX(10px)}}
+
+#controls{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding-bottom:max(18px,env(safe-area-inset-bottom))}
+#wheel{position:relative;width:min(70vw,290px,36vh);aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 3px rgba(255,255,255,.2)}
+#line{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
+.letter{position:absolute;width:24%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:#fff;color:#3b1d7a;font-weight:900;font-size:clamp(22px,7vw,34px);display:flex;align-items:center;justify-content:center;text-transform:uppercase;box-shadow:0 4px 0 rgba(0,0,0,.2);transition:background .1s,color .1s,left .3s,top .3s}
+.letter.on{background:#ffd43b;color:#3b2300;transform:translate(-50%,-50%) scale(1.08)}
+.round{width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.2);font-size:26px;position:relative;flex-shrink:0}
+.round small{position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);background:#ffd43b;color:#3b2300;font-size:12px;font-weight:800;border-radius:10px;padding:1px 6px;white-space:nowrap}
+#bonus{position:absolute;right:12px;top:58px;background:rgba(0,0,0,.25);border-radius:14px;padding:3px 10px;font-weight:800;color:#ffd43b}
+
+.overlay{position:absolute;inset:0;background:rgba(10,0,30,.6);display:none;align-items:center;justify-content:center;z-index:10}
+.overlay.show{display:flex}
+.card{background:linear-gradient(#7048e8,#5f3dc4);border-radius:28px;padding:30px 26px;display:flex;flex-direction:column;align-items:center;gap:16px;width:min(88%,360px);box-shadow:0 20px 50px rgba(0,0,0,.4);animation:pop .4s}
+.card h2{font-size:36px;color:#ffd43b}
+.reward{font-size:30px;font-weight:900;display:flex;align-items:center;gap:8px}
+.reward .coin{width:30px;height:30px}
+
+#toast{position:absolute;left:50%;top:22%;transform:translateX(-50%);background:rgba(0,0,0,.75);padding:10px 18px;border-radius:16px;font-weight:700;opacity:0;transition:opacity .25s;pointer-events:none;z-index:20;white-space:nowrap}
+#toast.show{opacity:1}
+.fake-ad{position:fixed;inset:0;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;z-index:100}
+</style>
+</head>
+<body>
+<div id="app">
+  <section id="menu" class="screen active">
+    <div class="logo"><span>СЛОВО</span><span>КРУТ</span></div>
+    <p class="tagline">Крути буквы — собирай слова</p>
+    <button id="play" class="big">Играть</button>
+    <div class="menu-coins"><i class="coin"></i><b id="menu-coins">0</b></div>
+  </section>
+
+  <section id="game" class="screen">
+    <header class="bar">
+      <button id="home" class="icon" aria-label="Меню">☰</button>
+      <div id="level-title">Уровень 1</div>
+      <div class="coins"><i class="coin"></i><b id="coins">0</b></div>
+      <button id="mute" class="icon" aria-label="Звук">🔊</button>
+    </header>
+    <div id="board-wrap"><div id="board"></div></div>
+    <div id="preview"></div>
+    <div id="controls">
+      <button id="shuffle" class="round" aria-label="Перемешать">⟳</button>
+      <div id="wheel"><svg id="line"></svg></div>
+      <button id="hint" class="round" aria-label="Подсказка"><span>💡</span><small id="hint-cost">30</small></button>
+    </div>
+    <div id="bonus" title="Бонусные слова">★ <b id="bonus-count">0</b></div>
+  </section>
+
+  <div id="win" class="overlay">
+    <div class="card">
+      <h2>Отлично!</h2>
+      <p id="win-text">Уровень пройден</p>
+      <div class="reward"><i class="coin"></i>+<b id="win-coins">15</b></div>
+      <button id="double" class="big alt">▶ Удвоить награду</button>
+      <button id="next" class="big">Дальше</button>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+<script>window.BAZHE_TARGET="telegram";window.BAZHE_ADS={"tgInter": "", "tgReward": "", "rsyaInter": "", "rsyaReward": ""};</script><script>window.LEVELS=[{"base":"крот","rows":5,"cols":6,"words":[{"w":"крот","r":1,"c":2,"h":true},{"w":"корт","r":1,"c":2,"h":false},{"w":"кот","r":0,"c":4,"h":false},{"w":"рот","r":4,"c":0,"h":true}],"bonus":["ток"]},{"base":"парк","rows":4,"cols":6,"words":[{"w":"парк","r":3,"c":2,"h":true},{"w":"карп","r":0,"c":2,"h":false},{"w":"пар","r":1,"c":4,"h":false},{"w":"рак","r":0,"c":0,"h":true}],"bonus":[]},{"base":"море","rows":3,"cols":4,"words":[{"w":"море","r":2,"c":0,"h":true},{"w":"ром","r":0,"c":0,"h":false},{"w":"мор","r":0,"c":2,"h":false}],"bonus":[]},{"base":"сорт","rows":4,"cols":4,"words":[{"w":"сорт","r":2,"c":0,"h":true},{"w":"рост","r":0,"c":0,"h":false},{"w":"торс","r":0,"c":2,"h":false},{"w":"рот","r":0,"c":0,"h":true}],"bonus":["сор"]},{"base":"лиса","rows":4,"cols":4,"words":[{"w":"лиса","r":2,"c":0,"h":true},{"w":"сила","r":0,"c":0,"h":false},{"w":"лис","r":0,"c":2,"h":false}],"bonus":[]},{"base":"пират","rows":4,"cols":7,"words":[{"w":"пират","r":3,"c":2,"h":true},{"w":"трап","r":0,"c":2,"h":false},{"w":"тир","r":1,"c":4,"h":false},{"w":"пар","r":1,"c":0,"h":true}],"bonus":[]},{"base":"пенал","rows":6,"cols":5,"words":[{"w":"пенал","r":2,"c":0,"h":true},{"w":"план","r":2,"c":0,"h":false},{"w":"пена","r":0,"c":2,"h":false},{"w":"лен","r":2,"c":4,"h":false}],"bonus":[]},{"base":"весна","rows":4,"cols":5,"words":[{"w":"весна","r":0,"c":0,"h":true},{"w":"вена","r":0,"c":0,"h":false},{"w":"сан","r":0,"c":2,"h":false}],"bonus":[]},{"base":"карта","rows":5,"cols":8,"words":[{"w":"карта","r":0,"c":2,"h":true},{"w":"карат","r":0,"c":2,"h":false},{"w":"тара","r":0,"c":5,"h":false},{"w":"кара","r":3,"c":4,"h":true},{"w":"рак","r":2,"c":7,"h":false},{"w":"акт","r":4,"c":0,"h":true}],"bonus":[]},{"base":"масло","rows":7,"cols":7,"words":[{"w":"масло","r":3,"c":0,"h":true},{"w":"смола","r":2,"c":0,"h":false},{"w":"сало","r":3,"c":2,"h":false},{"w":"слом","r":1,"c":4,"h":false},{"w":"лом","r":2,"c":4,"h":true},{"w":"сом","r":0,"c":6,"h":false},{"w":"мол","r":4,"c":4,"h":true}],"bonus":[]},{"base":"лампа","rows":5,"cols":5,"words":[{"w":"лампа","r":1,"c":0,"h":true},{"w":"лапа","r":1,"c":0,"h":false},{"w":"лама","r":0,"c":4,"h":false}],"bonus":[]},{"base":"дорога","rows":5,"cols":6,"words":[{"w":"дорога","r":2,"c":0,"h":true},{"w":"рога","r":1,"c":1,"h":false},{"w":"год","r":1,"c":3,"h":false},{"w":"ода","r":0,"c":5,"h":false}],"bonus":["род","рог"]},{"base":"страна","rows":7,"cols":9,"words":[{"w":"страна","r":3,"c":1,"h":true},{"w":"астра","r":2,"c":1,"h":false},{"w":"рана","r":3,"c":3,"h":false},{"w":"стан","r":1,"c":6,"h":false},{"w":"тара","r":6,"c":0,"h":true},{"w":"раса","r":0,"c":4,"h":false},{"w":"сан","r":1,"c":6,"h":true}],"bonus":[]},{"base":"корона","rows":8,"cols":7,"words":[{"w":"корона","r":3,"c":1,"h":true},{"w":"крона","r":3,"c":1,"h":false},{"w":"кора","r":2,"c":4,"h":false},{"w":"нора","r":0,"c":6,"h":false},{"w":"рок","r":5,"c":0,"h":true}],"bonus":[]},{"base":"стакан","rows":5,"cols":7,"words":[{"w":"стакан","r":4,"c":1,"h":true},{"w":"канат","r":0,"c":2,"h":false},{"w":"такса","r":0,"c":5,"h":false},{"w":"стан","r":1,"c":0,"h":true}],"bonus":[]},{"base":"карман","rows":7,"cols":6,"words":[{"w":"карман","r":5,"c":0,"h":true},{"w":"марка","r":2,"c":0,"h":false},{"w":"рама","r":3,"c":3,"h":false},{"w":"кран","r":2,"c":5,"h":false},{"w":"мак","r":2,"c":0,"h":true},{"w":"рак","r":0,"c":2,"h":false}],"bonus":[]},{"base":"ракета","rows":6,"cols":11,"words":[{"w":"ракета","r":3,"c":2,"h":true},{"w":"карта","r":1,"c":2,"h":false},{"w":"терка","r":0,"c":4,"h":false},{"w":"река","r":0,"c":7,"h":false},{"w":"каре","r":2,"c":7,"h":true},{"w":"кета","r":1,"c":10,"h":false},{"w":"рак","r":0,"c":7,"h":true},{"w":"акт","r":4,"c":0,"h":true}],"bonus":[]},{"base":"ворота","rows":7,"cols":9,"words":[{"w":"ворота","r":2,"c":1,"h":true},{"w":"отвар","r":0,"c":1,"h":false},{"w":"товар","r":1,"c":4,"h":false},{"w":"автор","r":2,"c":6,"h":false},{"w":"вор","r":5,"c":2,"h":true},{"w":"рот","r":0,"c":0,"h":true},{"w":"ров","r":6,"c":6,"h":true},{"w":"тор","r":4,"c":6,"h":true}],"bonus":[]},{"base":"машина","rows":6,"cols":6,"words":[{"w":"машина","r":3,"c":0,"h":true},{"w":"шаман","r":1,"c":0,"h":false},{"w":"ниша","r":1,"c":2,"h":false},{"w":"шина","r":1,"c":0,"h":true},{"w":"мина","r":0,"c":5,"h":false}],"bonus":[]},{"base":"портал","rows":8,"cols":10,"words":[{"w":"портал","r":3,"c":2,"h":true},{"w":"тропа","r":0,"c":2,"h":false},{"w":"плот","r":0,"c":5,"h":false},{"w":"порт","r":0,"c":5,"h":true},{"w":"рота","r":3,"c":4,"h":false},{"w":"трап","r":5,"c":4,"h":true},{"w":"пол","r":5,"c":7,"h":false},{"w":"лот","r":7,"c":7,"h":true},{"w":"рот","r":5,"c":9,"h":false},{"w":"пар","r":1,"c":0,"h":true},{"w":"пот","r":1,"c":0,"h":false}],"bonus":[]},{"base":"картон","rows":9,"cols":12,"words":[{"w":"картон","r":1,"c":6,"h":true},{"w":"крона","r":1,"c":6,"h":false},{"w":"кран","r":0,"c":8,"h":false},{"w":"нота","r":0,"c":10,"h":false},{"w":"рота","r":5,"c":3,"h":true},{"w":"корт","r":3,"c":3,"h":false},{"w":"крот","r":6,"c":0,"h":true},{"w":"кот","r":6,"c":0,"h":false},{"w":"ток","r":5,"c":5,"h":false},{"w":"рак","r":3,"c":1,"h":true}],"bonus":[]},{"base":"цветок","rows":5,"cols":6,"words":[{"w":"цветок","r":1,"c":0,"h":true},{"w":"цвет","r":1,"c":0,"h":false},{"w":"веко","r":0,"c":2,"h":false},{"w":"кот","r":0,"c":4,"h":false}],"bonus":["ток"]},{"base":"лопата","rows":5,"cols":9,"words":[{"w":"лопата","r":1,"c":3,"h":true},{"w":"плата","r":0,"c":3,"h":false},{"w":"лапа","r":0,"c":6,"h":false},{"w":"плот","r":3,"c":0,"h":true},{"w":"пол","r":1,"c":1,"h":false}],"bonus":["лот"]},{"base":"молоток","rows":5,"cols":11,"words":[{"w":"молоток","r":0,"c":2,"h":true},{"w":"молот","r":0,"c":2,"h":false},{"w":"лото","r":0,"c":4,"h":false},{"w":"кол","r":0,"c":8,"h":false},{"w":"ток","r":0,"c":6,"h":false},{"w":"кот","r":4,"c":0,"h":true},{"w":"лом","r":2,"c":8,"h":true}],"bonus":["том"]},{"base":"колбаса","rows":7,"cols":10,"words":[{"w":"колбаса","r":4,"c":3,"h":true},{"w":"собака","r":0,"c":3,"h":false},{"w":"бокал","r":0,"c":5,"h":false},{"w":"колба","r":0,"c":7,"h":false},{"w":"балка","r":0,"c":9,"h":false},{"w":"коса","r":3,"c":0,"h":true},{"w":"бас","r":0,"c":1,"h":true},{"w":"лоб","r":2,"c":1,"h":false},{"w":"сок","r":4,"c":8,"h":false},{"w":"кол","r":2,"c":5,"h":true},{"w":"оса","r":1,"c":7,"h":true}],"bonus":[]},{"base":"палатка","rows":9,"cols":8,"words":[{"w":"палатка","r":3,"c":1,"h":true},{"w":"палата","r":3,"c":1,"h":false},{"w":"палка","r":2,"c":4,"h":false},{"w":"лапка","r":5,"c":1,"h":true},{"w":"плата","r":1,"c":7,"h":false},{"w":"тапка","r":8,"c":0,"h":true},{"w":"лапа","r":0,"c":2,"h":false}],"bonus":[]},{"base":"подарок","rows":8,"cols":9,"words":[{"w":"подарок","r":2,"c":1,"h":true},{"w":"порода","r":2,"c":1,"h":false},{"w":"порок","r":1,"c":6,"h":false},{"w":"пора","r":5,"c":0,"h":true},{"w":"кора","r":4,"c":5,"h":true},{"w":"код","r":0,"c":3,"h":false},{"w":"рок","r":0,"c":1,"h":true},{"w":"пар","r":7,"c":0,"h":true},{"w":"рак","r":4,"c":3,"h":false}],"bonus":["род"]},{"base":"капуста","rows":5,"cols":9,"words":[{"w":"капуста","r":1,"c":0,"h":true},{"w":"паста","r":0,"c":1,"h":false},{"w":"такса","r":0,"c":6,"h":false},{"w":"пуск","r":0,"c":3,"h":false},{"w":"суп","r":3,"c":6,"h":true}],"bonus":[]},{"base":"чемодан","rows":5,"cols":7,"words":[{"w":"чемодан","r":2,"c":0,"h":true},{"w":"домна","r":0,"c":2,"h":false},{"w":"мода","r":0,"c":4,"h":false},{"w":"ода","r":4,"c":0,"h":true},{"w":"дом","r":0,"c":2,"h":true}],"bonus":["мед"]},{"base":"тарелка","rows":9,"cols":10,"words":[{"w":"тарелка","r":6,"c":3,"h":true},{"w":"ракета","r":2,"c":3,"h":false},{"w":"карта","r":2,"c":9,"h":false},{"w":"терка","r":3,"c":5,"h":true},{"w":"елка","r":5,"c":7,"h":false},{"w":"река","r":8,"c":4,"h":true},{"w":"тара","r":2,"c":1,"h":true},{"w":"кета","r":7,"c":0,"h":true},{"w":"рак","r":4,"c":1,"h":true},{"w":"лак","r":5,"c":0,"h":false},{"w":"акт","r":0,"c":1,"h":false}],"bonus":[]},{"base":"самолет","rows":8,"cols":9,"words":[{"w":"самолет","r":5,"c":2,"h":true},{"w":"место","r":3,"c":2,"h":false},{"w":"масло","r":3,"c":2,"h":true},{"w":"смола","r":7,"c":0,"h":true},{"w":"лето","r":4,"c":7,"h":false},{"w":"тема","r":0,"c":3,"h":false},{"w":"мост","r":0,"c":0,"h":true},{"w":"мел","r":1,"c":5,"h":false},{"w":"сом","r":3,"c":4,"h":false},{"w":"лом","r":7,"c":6,"h":true}],"bonus":[]},{"base":"корзина","rows":11,"cols":12,"words":[{"w":"корзина","r":6,"c":2,"h":true},{"w":"зона","r":5,"c":3,"h":false},{"w":"роза","r":4,"c":5,"h":false},{"w":"коза","r":3,"c":8,"h":false},{"w":"кино","r":3,"c":8,"h":true},{"w":"икра","r":8,"c":0,"h":true},{"w":"кран","r":0,"c":10,"h":false},{"w":"кора","r":1,"c":8,"h":true},{"w":"нора","r":6,"c":7,"h":false},{"w":"рак","r":8,"c":7,"h":true},{"w":"рок","r":8,"c":2,"h":false}],"bonus":[]},{"base":"шоколад","rows":5,"cols":9,"words":[{"w":"шоколад","r":0,"c":2,"h":true},{"w":"школа","r":0,"c":2,"h":false},{"w":"лодка","r":0,"c":6,"h":false},{"w":"код","r":0,"c":4,"h":false},{"w":"док","r":0,"c":8,"h":false},{"w":"шок","r":1,"c":0,"h":true},{"w":"кол","r":3,"c":0,"h":true}],"bonus":[]},{"base":"апельсин","rows":9,"cols":8,"words":[{"w":"апельсин","r":6,"c":0,"h":true},{"w":"спина","r":2,"c":0,"h":false},{"w":"пена","r":3,"c":0,"h":true},{"w":"липа","r":5,"c":6,"h":false},{"w":"лиса","r":8,"c":3,"h":true},{"w":"сила","r":0,"c":3,"h":false},{"w":"пила","r":1,"c":2,"h":true},{"w":"сани","r":0,"c":5,"h":false}],"bonus":[]},{"base":"космонавт","rows":7,"cols":10,"words":[{"w":"космонавт","r":5,"c":1,"h":true},{"w":"восток","r":0,"c":1,"h":false},{"w":"носок","r":2,"c":5,"h":false},{"w":"мост","r":3,"c":3,"h":false},{"w":"сова","r":2,"c":7,"h":false},{"w":"нос","r":2,"c":5,"h":true},{"w":"сон","r":1,"c":0,"h":true},{"w":"кот","r":3,"c":9,"h":false}],"bonus":["сок","мак"]}];
+</script>
+<script>// Адаптер площадок: Яндекс Игры, VK/OK (VK Bridge), Telegram Mini App (Adsgram),
+// RuStore APK (РСЯ в WebView), локальный запуск.
+// Площадку можно задать явно: window.BAZHE_TARGET = 'telegram' | 'rustore' (ставит сборщик).
+// ID рекламных блоков берутся из window.BAZHE_ADS (тоже ставит сборщик).
+const Platform = (() => {
+  const qs = new URLSearchParams(location.search);
+  const ADS = window.BAZHE_ADS || {};
+  let kind = window.BAZHE_TARGET || 'local';
+  if (kind === 'local') {
+    if (qs.has('vk_app_id') || qs.has('vk_platform')) kind = 'vk';
+    else if (/yandex|playhop/.test(location.hostname)) kind = 'yandex';
+  }
+
+  const INTER_COOLDOWN = 60000;
+  let ysdk = null, player = null, bridge = null, tg = null, lastInter = Date.now();
+  let adsInter = null, adsReward = null;
+  const hooks = { pause: () => {}, resume: () => {} };
+
+  function loadScript(src) {
+    return new Promise((ok, fail) => {
+      const s = document.createElement('script');
+      s.src = src; s.onload = ok; s.onerror = fail;
+      document.head.appendChild(s);
+    });
+  }
+  function withTimeout(p, ms) {
+    return Promise.race([p, new Promise((_, fail) => setTimeout(() => fail(new Error('timeout')), ms))]);
+  }
+
+  async function init() {
+    try {
+      if (kind === 'yandex') {
+        await withTimeout(loadScript('/sdk.js'), 6000);
+        ysdk = await withTimeout(YaGames.init(), 6000);
+        try { player = await ysdk.getPlayer({ scopes: false }); } catch (e) { player = null; }
+        ysdk.on && ysdk.on('game_api_pause', () => hooks.pause());
+        ysdk.on && ysdk.on('game_api_resume', () => hooks.resume());
+      } else if (kind === 'vk') {
+        await withTimeout(loadScript('https://unpkg.com/@vkontakte/vk-bridge@2.14.1/dist/browser.min.js'), 6000);
+        bridge = window.vkBridge;
+        await bridge.send('VKWebAppInit');
+        bridge.subscribe(e => {
+          const t = e.detail && e.detail.type;
+          if (t === 'VKWebAppViewHide') hooks.pause();
+          if (t === 'VKWebAppViewRestore') hooks.resume();
+        });
+        preloadVk();
+      } else if (kind === 'telegram') {
+        await withTimeout(loadScript('https://telegram.org/js/telegram-web-app.js'), 6000);
+        tg = window.Telegram && window.Telegram.WebApp;
+        if (tg) { tg.ready(); tg.expand(); tg.disableVerticalSwipes && tg.disableVerticalSwipes(); }
+        try {
+          await withTimeout(loadScript('https://sad.adsgram.ai/js/sad.min.js'), 6000);
+          if (ADS.tgInter) adsInter = window.Adsgram.init({ blockId: ADS.tgInter });
+          if (ADS.tgReward) adsReward = window.Adsgram.init({ blockId: ADS.tgReward });
+        } catch (e) { console.warn('adsgram not loaded', e); }
+      } else if (kind === 'rustore') {
+        // реклама РСЯ (веб-блоки) внутри WebView приложения
+        window.yaContextCb = window.yaContextCb || [];
+        loadScript('https://yandex.ru/ads/system/context.js').catch(() => {});
+      }
+    } catch (e) {
+      console.warn('platform init failed, local mode', e);
+      kind = 'local';
+    }
+  }
+
+  function preloadVk() {
+    bridge.send('VKWebAppCheckNativeAds', { ad_format: 'interstitial' }).catch(() => {});
+    bridge.send('VKWebAppCheckNativeAds', { ad_format: 'reward' }).catch(() => {});
+  }
+
+  function ready() {
+    try { ysdk && ysdk.features.LoadingAPI && ysdk.features.LoadingAPI.ready(); } catch (e) {}
+  }
+  function gameplay(on) {
+    try {
+      const g = ysdk && ysdk.features.GameplayAPI;
+      if (g) on ? g.start() : g.stop();
+    } catch (e) {}
+  }
+
+  // РСЯ: полноэкранный/вознаграждаемый блок; true — досмотрен
+  function rsya(blockId, type) {
+    return new Promise(done => {
+      if (!blockId || !window.yaContextCb) return done(false);
+      let finished = false;
+      const finish = ok => { if (finished) return; finished = true; hooks.resume(); done(ok); };
+      hooks.pause();
+      window.yaContextCb.push(() => {
+        try {
+          Ya.Context.AdvManager.render({
+            blockId, type, platform: 'touch',
+            onRewarded: () => finish(true),
+            onClose: () => finish(type !== 'rewarded'),
+            onError: () => finish(false),
+          });
+        } catch (e) { finish(false); }
+      });
+      setTimeout(() => finish(false), 60000);
+    });
+  }
+
+  function showInterstitial() {
+    if (Date.now() - lastInter < INTER_COOLDOWN) return Promise.resolve(false);
+    lastInter = Date.now();
+    if (kind === 'yandex') {
+      return new Promise(done => {
+        ysdk.adv.showFullscreenAdv({ callbacks: {
+          onOpen: () => hooks.pause(),
+          onClose: shown => { hooks.resume(); done(shown); },
+          onError: () => { hooks.resume(); done(false); },
+        } });
+      });
+    }
+    if (kind === 'vk') {
+      hooks.pause();
+      return bridge.send('VKWebAppShowNativeAds', { ad_format: 'interstitial' })
+        .then(d => !!(d && d.result)).catch(() => false)
+        .finally(() => { hooks.resume(); preloadVk(); });
+    }
+    if (kind === 'telegram') {
+      if (!adsInter) return Promise.resolve(false);
+      hooks.pause();
+      return adsInter.show().then(() => true).catch(() => false).finally(() => hooks.resume());
+    }
+    if (kind === 'rustore') return rsya(ADS.rsyaInter, 'fullscreen');
+    console.log('[ads] interstitial (локально)');
+    return Promise.resolve(false);
+  }
+
+  // true только если реклама досмотрена и награда положена
+  function showRewarded() {
+    if (kind === 'yandex') {
+      return new Promise(done => {
+        let rewarded = false, finished = false;
+        const finish = () => { if (finished) return; finished = true; hooks.resume(); done(rewarded); };
+        ysdk.adv.showRewardedVideo({ callbacks: {
+          onOpen: () => hooks.pause(),
+          onRewarded: () => { rewarded = true; },
+          onClose: finish,
+          onError: finish,
+        } });
+      });
+    }
+    if (kind === 'vk') {
+      hooks.pause();
+      return bridge.send('VKWebAppShowNativeAds', { ad_format: 'reward' })
+        .then(d => !!(d && d.result)).catch(() => false)
+        .finally(() => { hooks.resume(); lastInter = Date.now(); preloadVk(); });
+    }
+    if (kind === 'telegram') {
+      if (!adsReward) return Promise.resolve(false);
+      hooks.pause();
+      // Adsgram: resolve с done=true — досмотрено до конца
+      return adsReward.show().then(r => !!(r && r.done)).catch(() => false)
+        .finally(() => { hooks.resume(); lastInter = Date.now(); });
+    }
+    if (kind === 'rustore') return rsya(ADS.rsyaReward, 'rewarded').then(ok => { lastInter = Date.now(); return ok; });
+    return fakeAd();
+  }
+
+  function fakeAd() {
+    return new Promise(done => {
+      const el = document.createElement('div');
+      el.className = 'fake-ad';
+      el.textContent = 'Реклама (тест)…';
+      document.body.appendChild(el);
+      hooks.pause();
+      setTimeout(() => { el.remove(); hooks.resume(); done(true); }, 1200);
+    });
+  }
+
+  const KEY = 'slovokrut_save';
+
+  async function load() {
+    const all = [];
+    try { const s = localStorage.getItem(KEY); if (s) all.push(JSON.parse(s)); } catch (e) {}
+    try {
+      if (kind === 'vk') {
+        const r = await withTimeout(bridge.send('VKWebAppStorageGet', { keys: [KEY] }), 3000);
+        const v = r.keys && r.keys[0] && r.keys[0].value;
+        if (v) all.push(JSON.parse(v));
+      } else if (player) {
+        const d = await withTimeout(player.getData([KEY]), 3000);
+        if (d && d[KEY]) all.push(d[KEY]);
+      } else if (tg && tg.CloudStorage) {
+        const v = await withTimeout(new Promise(ok => tg.CloudStorage.getItem(KEY, (e, val) => ok(e ? null : val))), 3000);
+        if (v) all.push(JSON.parse(v));
+      }
+    } catch (e) {}
+    // берём самый продвинутый сейв
+    all.sort((a, b) => (b.lvl || 0) - (a.lvl || 0) || (b.ts || 0) - (a.ts || 0));
+    return all[0] || null;
+  }
+
+  let saveTimer = null;
+  function save(data) {
+    data.ts = Date.now();
+    const json = JSON.stringify(data);
+    try { localStorage.setItem(KEY, json); } catch (e) {}
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        if (kind === 'vk') bridge.send('VKWebAppStorageSet', { key: KEY, value: json }).catch(() => {});
+        else if (player) player.setData({ [KEY]: data }).catch(() => {});
+        else if (tg && tg.CloudStorage && json.length <= 4096) tg.CloudStorage.setItem(KEY, json, () => {});
+      } catch (e) {}
+    }, 1500);
+  }
+
+  return { init, ready, gameplay, showInterstitial, showRewarded, load, save, hooks, get kind() { return kind; } };
+})();
+</script>
+<script>(() => {
+  const $ = id => document.getElementById(id);
+  const LEVELS = window.LEVELS;
+  const HINT_COST = 30;
+  const WIN_COINS = 15;
+  const BONUS_COINS = 5;
+
+  let S = { lvl: 0, coins: 60, found: [], hinted: [], bonusFound: [], mute: false, played: 0 };
+  let level = null, cells = new Map(), letters = [], picked = [], dragging = false, busy = false;
+
+  // ---------- звук ----------
+  let ac = null;
+  function tone(freq, dur = 0.12, type = 'sine', vol = 0.15, delay = 0) {
+    if (S.mute) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+      const t = ac.currentTime + delay;
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = type; o.frequency.setValueAtTime(freq, t);
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(g).connect(ac.destination);
+      o.start(t); o.stop(t + dur);
+    } catch (e) {}
+  }
+  const sfx = {
+    pick: n => tone(440 * Math.pow(2, n / 6), 0.09, 'triangle', 0.12),
+    good: () => [523, 659, 784].forEach((f, i) => tone(f, 0.18, 'triangle', 0.14, i * 0.07)),
+    bad: () => tone(160, 0.25, 'sawtooth', 0.08),
+    dup: () => tone(300, 0.12, 'square', 0.06),
+    bonus: () => [784, 1047].forEach((f, i) => tone(f, 0.15, 'sine', 0.14, i * 0.08)),
+    win: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.25, 'triangle', 0.14, i * 0.09)),
+  };
+  Platform.hooks.pause = () => { if (ac) ac.suspend(); };
+  Platform.hooks.resume = () => { if (ac && !S.mute) ac.resume(); };
+  document.addEventListener('visibilitychange', () => document.hidden ? Platform.hooks.pause() : Platform.hooks.resume());
+
+  // ---------- утилиты ----------
+  function toast(text) {
+    const t = $('toast');
+    t.textContent = text; t.classList.add('show');
+    clearTimeout(toast.tm); toast.tm = setTimeout(() => t.classList.remove('show'), 1400);
+  }
+  function save() { Platform.save(S); }
+  function setCoins(n) {
+    S.coins = n; $('coins').textContent = n; $('menu-coins').textContent = n;
+    $('hint-cost').textContent = S.coins >= HINT_COST ? HINT_COST : '▶';
+  }
+  function cellsOf(w) {
+    const out = [];
+    for (let i = 0; i < w.w.length; i++) out.push(w.h ? `${w.r},${w.c + i}` : `${w.r + i},${w.c}`);
+    return out;
+  }
+  function shuffle(a) {
+    for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  }
+
+  // ---------- уровень ----------
+  function startLevel() {
+    const idx = S.lvl % LEVELS.length;
+    level = LEVELS[idx];
+    const hue = (265 + S.lvl * 37) % 360;
+    document.body.style.setProperty('--h1', hue);
+    document.body.style.setProperty('--h2', (hue + 55) % 360);
+    $('level-title').textContent = `Уровень ${S.lvl + 1}`;
+    buildBoard();
+    letters = level.base.split('');
+    do shuffle(letters); while (letters.join('') === level.base && letters.length > 2);
+    buildWheel();
+    $('bonus-count').textContent = S.bonusFound.length;
+    Platform.gameplay(true);
+  }
+
+  function buildBoard() {
+    const board = $('board');
+    board.innerHTML = '';
+    cells.clear();
+    for (const w of level.words) {
+      cellsOf(w).forEach((key, i) => {
+        if (cells.has(key)) return;
+        const el = document.createElement('div');
+        el.className = 'cell';
+        el.textContent = w.w[i];
+        board.appendChild(el);
+        cells.set(key, el);
+      });
+    }
+    for (const w of level.words) if (S.found.includes(w.w)) cellsOf(w).forEach(k => cells.get(k).classList.add('open'));
+    for (const k of S.hinted) { const c = cells.get(k); if (c && !c.classList.contains('open')) c.classList.add('open', 'hinted'); }
+    layoutBoard();
+  }
+
+  function layoutBoard() {
+    if (!level) return;
+    const wrap = $('board-wrap');
+    const W = wrap.clientWidth - 24, H = wrap.clientHeight - 8;
+    const size = Math.max(16, Math.min(W / level.cols, H / level.rows, 58));
+    const gap = size * 0.08;
+    const board = $('board');
+    board.style.width = level.cols * size + 'px';
+    board.style.height = level.rows * size + 'px';
+    for (const [key, el] of cells) {
+      const [r, c] = key.split(',').map(Number);
+      Object.assign(el.style, {
+        left: c * size + gap / 2 + 'px', top: r * size + gap / 2 + 'px',
+        width: size - gap + 'px', height: size - gap + 'px', fontSize: size * 0.58 + 'px',
+      });
+    }
+  }
+
+  function buildWheel() {
+    const wheel = $('wheel');
+    wheel.querySelectorAll('.letter').forEach(e => e.remove());
+    const n = letters.length;
+    const R = n > 7 ? 36 : 33;
+    letters.forEach((ch, i) => {
+      const a = -Math.PI / 2 + (i / n) * Math.PI * 2;
+      const el = document.createElement('div');
+      el.className = 'letter';
+      el.textContent = ch;
+      el.dataset.i = i;
+      el.style.left = 50 + R * Math.cos(a) + '%';
+      el.style.top = 50 + R * Math.sin(a) + '%';
+      if (n > 7) { el.style.width = '21%'; el.style.fontSize = 'clamp(18px,6vw,28px)'; }
+      wheel.appendChild(el);
+    });
+  }
+
+  // ---------- ввод свайпом ----------
+  function letterAt(x, y) {
+    for (const el of $('wheel').querySelectorAll('.letter')) {
+      const b = el.getBoundingClientRect();
+      const cx = b.left + b.width / 2, cy = b.top + b.height / 2;
+      if (Math.hypot(x - cx, y - cy) < b.width * 0.55) return el;
+    }
+    return null;
+  }
+
+  function addLetter(el) {
+    const i = +el.dataset.i;
+    const pos = picked.indexOf(i);
+    if (pos === -1) {
+      picked.push(i); el.classList.add('on'); sfx.pick(picked.length);
+    } else if (pos === picked.length - 2) {
+      // шаг назад — снимаем последнюю букву
+      const last = picked.pop();
+      $('wheel').querySelector(`.letter[data-i="${last}"]`).classList.remove('on');
+    }
+    drawPreview();
+  }
+
+  function drawPreview(cls = '') {
+    const p = $('preview');
+    p.className = cls;
+    p.innerHTML = picked.map(i => `<span>${letters[i]}</span>`).join('');
+  }
+
+  function drawLine(px, py) {
+    const svg = $('line');
+    const wb = $('wheel').getBoundingClientRect();
+    const pts = picked.map(i => {
+      const b = $('wheel').querySelector(`.letter[data-i="${i}"]`).getBoundingClientRect();
+      return [b.left + b.width / 2 - wb.left, b.top + b.height / 2 - wb.top];
+    });
+    if (dragging && px != null) pts.push([px - wb.left, py - wb.top]);
+    svg.innerHTML = pts.length > 1
+      ? `<polyline points="${pts.map(p => p.join(',')).join(' ')}" fill="none" stroke="#ffd43b" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity=".85"/>`
+      : '';
+  }
+
+  const wheelEl = $('wheel');
+  wheelEl.addEventListener('pointerdown', e => {
+    if (busy) return;
+    const el = letterAt(e.clientX, e.clientY);
+    if (!el) return;
+    dragging = true; picked = [];
+    wheelEl.setPointerCapture(e.pointerId);
+    addLetter(el); drawLine(e.clientX, e.clientY);
+  });
+  wheelEl.addEventListener('pointermove', e => {
+    if (!dragging) return;
+    const el = letterAt(e.clientX, e.clientY);
+    if (el) addLetter(el);
+    drawLine(e.clientX, e.clientY);
+  });
+  const endDrag = () => {
+    if (!dragging) return;
+    dragging = false;
+    const word = picked.map(i => letters[i]).join('');
+    wheelEl.querySelectorAll('.letter.on').forEach(e => e.classList.remove('on'));
+    $('line').innerHTML = '';
+    submit(word);
+  };
+  wheelEl.addEventListener('pointerup', endDrag);
+  wheelEl.addEventListener('pointercancel', endDrag);
+
+  // ---------- проверка слова ----------
+  function submit(word) {
+    if (word.length < 3) { picked = []; drawPreview(); return; }
+    const target = level.words.find(w => w.w === word);
+    let cls;
+    if (target && !S.found.includes(word)) {
+      cls = 'good'; S.found.push(word); sfx.good();
+      cellsOf(target).forEach((k, i) => setTimeout(() => cells.get(k).classList.add('open'), i * 60));
+    } else if (target || S.bonusFound.includes(word)) {
+      cls = 'dup'; sfx.dup(); toast('Уже найдено');
+    } else if ((level.bonus || []).includes(word)) {
+      cls = 'good'; S.bonusFound.push(word); sfx.bonus();
+      setCoins(S.coins + BONUS_COINS); toast(`Бонусное слово! +${BONUS_COINS}`);
+      $('bonus-count').textContent = S.bonusFound.length;
+    } else {
+      cls = 'bad'; sfx.bad();
+    }
+    drawPreview(cls);
+    save();
+    setTimeout(() => { picked = []; drawPreview(); }, 450);
+    checkWin();
+  }
+
+  function checkWin() {
+    // слово считается найденным, если все его клетки открыты (в т.ч. подсказками)
+    for (const w of level.words) {
+      if (!S.found.includes(w.w) && cellsOf(w).every(k => cells.get(k).classList.contains('open'))) S.found.push(w.w);
+    }
+    if (level.words.every(w => S.found.includes(w.w))) {
+      busy = true;
+      Platform.gameplay(false);
+      setTimeout(showWin, 700);
+    }
+  }
+
+  // ---------- подсказка ----------
+  async function hint() {
+    if (busy) return;
+    const target = level.words.find(w => !S.found.includes(w.w));
+    if (!target) return;
+    if (S.coins >= HINT_COST) {
+      setCoins(S.coins - HINT_COST);
+    } else {
+      busy = true;
+      const ok = await Platform.showRewarded();
+      busy = false;
+      if (!ok) { toast('Подсказка за просмотр рекламы'); return; }
+    }
+    const key = cellsOf(target).find(k => !cells.get(k).classList.contains('open'));
+    const c = cells.get(key);
+    c.classList.add('open', 'hinted', 'flash');
+    setTimeout(() => c.classList.remove('flash'), 600);
+    S.hinted.push(key);
+    sfx.pick(3);
+    save();
+    checkWin();
+  }
+
+  // ---------- победа ----------
+  let doubled = false;
+  function showWin() {
+    sfx.win();
+    doubled = false;
+    $('win-coins').textContent = WIN_COINS;
+    $('win-text').textContent = `Уровень ${S.lvl + 1} пройден`;
+    $('double').style.display = '';
+    $('win').classList.add('show');
+    setCoins(S.coins + WIN_COINS);
+    S.lvl++; S.found = []; S.hinted = []; S.bonusFound = []; S.played++;
+    save();
+  }
+
+  $('double').onclick = async () => {
+    if (doubled) return;
+    const ok = await Platform.showRewarded();
+    if (!ok) { toast('Награда за просмотр рекламы'); return; }
+    doubled = true;
+    setCoins(S.coins + WIN_COINS);
+    $('win-coins').textContent = WIN_COINS * 2;
+    $('double').style.display = 'none';
+    sfx.bonus(); save();
+  };
+
+  $('next').onclick = async () => {
+    $('win').classList.remove('show');
+    // межуровневая реклама не раньше 3-го уровня; кулдаун внутри Platform
+    if (S.played >= 3 && !doubled) await Platform.showInterstitial();
+    busy = false;
+    if (S.lvl % LEVELS.length === 0) toast('Все уровни пройдены! Круг заново');
+    startLevel();
+  };
+
+  // ---------- кнопки ----------
+  $('shuffle').onclick = () => {
+    if (busy || dragging) return;
+    shuffle(letters); buildWheel(); sfx.pick(1);
+  };
+  $('hint').onclick = hint;
+  $('play').onclick = () => { showScreen('game'); startLevel(); };
+  $('home').onclick = () => { Platform.gameplay(false); showScreen('menu'); };
+  $('mute').onclick = () => {
+    S.mute = !S.mute; $('mute').textContent = S.mute ? '🔇' : '🔊';
+    S.mute ? Platform.hooks.pause() : Platform.hooks.resume();
+    save();
+  };
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id));
+    if (id === 'game') requestAnimationFrame(layoutBoard);
+    $('play').textContent = S.lvl ? `Уровень ${S.lvl + 1}` : 'Играть';
+  }
+
+  window.addEventListener('resize', layoutBoard);
+
+  // ---------- старт ----------
+  (async () => {
+    await Platform.init();
+    const saved = await Platform.load();
+    if (saved) S = Object.assign(S, saved);
+    setCoins(S.coins);
+    $('mute').textContent = S.mute ? '🔇' : '🔊';
+    showScreen('menu');
+    Platform.ready();
+  })();
+})();
+</script>
+</body>
+</html>
